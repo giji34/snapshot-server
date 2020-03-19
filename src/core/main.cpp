@@ -8,13 +8,13 @@ using namespace mcfile;
 namespace fs = mcfile::detail::filesystem;
 
 static void PrintError(string const& message) {
-    cerr << "core -w [world directory] -x [min block x] -X [max block x] -y [min block y] -Y [max block y] -z [min block z] -Z [max block z] -d [dimension; o:overworld, n:nether, e:the end]" << endl;
+    cerr << "core -w [world directory] -x [min block x] -X [max block x] -y [min block y] -Y [max block y] -z [min block z] -Z [max block z]" << endl;
     cout << "{" << endl;
     cout << "  status: \"" << message << "\"" << endl;
     cout << "}" << endl;
 }
 
-static bool const kDebug = true;
+static bool kDebug = false;
 
 static string Indent(int n) {
     if (kDebug) {
@@ -36,10 +36,7 @@ static string Indent(int n) {
 }
 
 int main(int argc, char *argv[]) {
-    string const nl = kDebug ? "\n" : "";
-    
     string input;
-    int dimension = 100;
     int minBx = INT_MAX;
     int maxBx = INT_MIN;
     int minBy = INT_MAX;
@@ -49,23 +46,13 @@ int main(int argc, char *argv[]) {
 
     int opt;
     opterr = 0;
-    while ((opt = getopt(argc, argv, "w:x:X:y:Y:z:Z:d:")) != -1) {
+    while ((opt = getopt(argc, argv, "w:x:X:y:Y:z:Z:d")) != -1) {
         switch (opt) {
             case 'w':
                 input = optarg;
                 break;
             case 'd': {
-                string d(optarg);
-                if (d == "o") {
-                    dimension = 0;
-                } else if (d == "n") {
-                    dimension = -1;
-                } else if (d == "e") {
-                    dimension = 1;
-                } else {
-                    PrintError("invalid dimension spec: " + d);
-                    return 1;
-                }
+                kDebug = true;
                 break;
             }
             case 'x':
@@ -113,14 +100,12 @@ int main(int argc, char *argv[]) {
         PrintError("invalid block range");
         return 1;
     }
-    if (dimension < -1 || 1 < dimension) {
-        PrintError("invalid dimension");
-        return 1;
-    }
     if (input.empty()) {
         PrintError("invalid world");
         return 1;
     }
+
+    string const nl = kDebug ? "\n" : "";
 
     int const minRx = Coordinate::RegionFromBlock(minBx);
     int const maxRx = Coordinate::RegionFromBlock(maxBx);
