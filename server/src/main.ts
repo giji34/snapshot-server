@@ -196,7 +196,7 @@ function getHistory(historyDirectory: string, core: string) {
     const { dimension, time, minX, maxX, minY, maxY, minZ, maxZ } = req.query;
     const date = new Date(time * 1000);
     const d = sprintf(
-      "%d-%02d-%02d %02d:%02d:%02d",
+      "%d%02d%02d%02d%02d%02d",
       date.getFullYear(),
       date.getMonth() + 1,
       date.getDate(),
@@ -204,9 +204,14 @@ function getHistory(historyDirectory: string, core: string) {
       date.getMinutes(),
       date.getSeconds()
     );
+    //NOTE: git log --before を使いたいが, before は commit date に対して効く(--author-date-order を指定したとしても).
+    // author date で見たいので自力でソートする.
     const log = child_process.spawn(
       "bash",
-      ["-c", `git log --reverse --pretty=%H --after="${d}" | head -1`],
+      [
+        "-c",
+        `(echo '${d},x'; git log --pretty='%ad,%H' --author-date-order --date='format:%Y%m%d%H%M%S') | sort | grep -A 1 '${d},x' | tail -1 | cut -d , -f 2`
+      ],
       { cwd: historyDirectory }
     );
     let hash = "";
@@ -214,7 +219,6 @@ function getHistory(historyDirectory: string, core: string) {
       hash += data;
     });
     log.on("close", () => {
-      log.kill();
       sendByHash(req, res, {
         core,
         historyDirectory,
