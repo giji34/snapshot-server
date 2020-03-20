@@ -20,10 +20,11 @@ function getWild(wildDirectory: string, core: string) {
         minZ,
         maxZ
       } = req.query;
+      const dim = parseInt(dimension, 10);
       let world: string;
-      if (dimension === -1) {
+      if (dim === -1) {
         world = path.join(wildDirectory, version, "world_nether", "DIM-1");
-      } else if (dimension === 1) {
+      } else if (dim === 1) {
         world = path.join(wildDirectory, version, "world_the_end", "DIM1");
       } else {
         world = path.join(wildDirectory, version, "world");
@@ -223,7 +224,7 @@ function getHistory(historyDirectory: string, core: string) {
         core,
         historyDirectory,
         hash: hash.trim(),
-        dimension,
+        dimension: parseInt(dimension, 10),
         minX,
         maxX,
         minY,
