@@ -35,6 +35,10 @@ static string Indent(int n) {
     }
 }
 
+static string NewLine() {
+    return kDebug ? "\n" : "";
+}
+
 static string NamespacedId(shared_ptr<Block const> const& block) {
     if (!block) {
         return "air";
@@ -44,6 +48,22 @@ static string NamespacedId(shared_ptr<Block const> const& block) {
         return name.substr(10);
     } else {
         return ":" + name;
+    }
+}
+
+template<class T, class V>
+static void PrintVectorContent(vector<T> const& v, int indent, function<V(T const& v)> convert) {
+    auto nl = NewLine();
+    auto it = v.begin();
+    while (true) {
+        cout << Indent(indent) << convert(*it);
+        it++;
+        if (it == v.end()) {
+            cout << nl;
+            break;
+        } else {
+            cout << "," << nl;
+        }
     }
 }
 
@@ -117,7 +137,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    string const nl = kDebug ? "\n" : "";
+    string const nl = NewLine();
 
     int const minRx = Coordinate::RegionFromBlock(minBx);
     int const maxRx = Coordinate::RegionFromBlock(maxBx);
@@ -210,36 +230,15 @@ int main(int argc, char *argv[]) {
     cout << "{" << nl;
     cout << Indent(1) << "status:\"ok\"," << nl;
     cout << Indent(1) << "palette:[" << nl;
-    {
-        auto it = palette.begin();
-        while (true) {
-            cout << Indent(2) << "\"" << *it << "\"";
-            it++;
-            if (it == palette.end()) {
-                cout << nl;
-                break;
-            } else {
-                cout << "," << nl;
-            }
-        }
-    }
+    PrintVectorContent<string, string>(palette, 2, [](string const& v) {
+        return "\"" + v + "\"";
+    });
     cout << Indent(1) << "]," << nl;
     cout << Indent(1) << "blocks:[" << nl;
-    {
-        auto it = blocks.begin();
-        while (true) {
-            auto found = find(palette.begin(), palette.end(), *it);
-            int const idx = distance(palette.begin(), found);
-            cout << Indent(2) << idx;
-            it++;
-            if (it == blocks.end()) {
-                cout << nl;
-                break;
-            } else {
-                cout << "," << nl;
-            }
-        }
-    }
+    PrintVectorContent<string, int>(blocks, 2, [&palette](string const& b) {
+        auto found = find(palette.begin(), palette.end(), b);
+        return distance(palette.begin(), found);
+    });
     cout << Indent(1) << "]" << nl;
     cout << "}" << nl;
 }
