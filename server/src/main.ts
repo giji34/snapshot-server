@@ -7,7 +7,7 @@ import * as sprintf from "sprintf";
 import { mkdirSync, mkdtempSync, rmdir } from "fs";
 import * as fs from "fs";
 
-function getWild(wildDirectory: string) {
+function getWild(wildDirectory: string, core: string) {
   return (req, res) => {
     try {
       const {
@@ -20,7 +20,6 @@ function getWild(wildDirectory: string) {
         minZ,
         maxZ
       } = req.query;
-      const core = path.join(__dirname, "..", "core", "build", "core");
       const world = path.join(wildDirectory, version, `${dimension}`);
       const p = child_process.spawn(core, [
         "-w",
@@ -105,6 +104,7 @@ function sendByHash(
   req,
   res,
   params: {
+    core: string;
     historyDirectory: string;
     hash: string;
     dimension: number;
@@ -117,6 +117,7 @@ function sendByHash(
   }
 ) {
   const {
+    core,
     hash,
     dimension,
     minX,
@@ -160,8 +161,7 @@ function sendByHash(
       minZ,
       maxZ
     });
-    const executable = path.join(__dirname, "..", "core", "build", "core");
-    const core = child_process.spawn(executable, [
+    const p = child_process.spawn(core, [
       "-w",
       tmp,
       "-x",
@@ -177,14 +177,14 @@ function sendByHash(
       "-Z",
       `${maxZ}`
     ]);
-    core.stdout.pipe(res);
-    core.on("close", () => {
+    p.stdout.pipe(res);
+    p.on("close", () => {
       rmdir(tmp, { recursive: true }, () => {});
     });
   });
 }
 
-function getHistory(historyDirectory: string) {
+function getHistory(historyDirectory: string, core: string) {
   return (req, res) => {
     const { dimension, time, minX, maxX, minY, maxY, minZ, maxZ } = req.query;
     const date = new Date(time * 1000);
@@ -197,7 +197,11 @@ function getHistory(historyDirectory: string) {
       date.getMinutes(),
       date.getSeconds()
     );
-    const log = child_process.spawn("bash", ["-c", `git log --reverse --pretty=%H --after="${d}" | head -1`], {cwd:historyDirectory});
+    const log = child_process.spawn(
+      "bash",
+      ["-c", `git log --reverse --pretty=%H --after="${d}" | head -1`],
+      { cwd: historyDirectory }
+    );
     let hash = "";
     log.stdout.on("data", data => {
       hash += data;
@@ -205,6 +209,7 @@ function getHistory(historyDirectory: string) {
     log.on("close", () => {
       log.kill();
       sendByHash(req, res, {
+        core,
         historyDirectory,
         hash: hash.trim(),
         dimension,
@@ -222,11 +227,16 @@ function getHistory(historyDirectory: string) {
 caporal
   .command("run", "start server")
   .option("--port <port>", "port number", caporal.INT, 8001)
+  .option("--core <core>", "executable file of the core", caporal.STRING)
   .option("--wild <wild>", "directory for wild snapshot", caporal.STRING)
   .option("--history <history>", "directory for backup history", caporal.STRING)
   .action(async (args, opts) => {
     const port = opts.port;
     const wild = opts.wild;
+    const core = opts.core;
+    if (!core) {
+      throw new Error("'core' not specified");
+    }
     if (!wild) {
       throw new Error("'wild' not specified");
     }
@@ -235,8 +245,8 @@ caporal
       throw new Error(`'history' not specified`);
     }
     const app = express();
-    app.get("/wild", getWild(wild));
-    app.get("/history", getHistory(history));
+    app.get("/wild", getWild(wild, core));
+    app.get("/history", getHistory(history, core));
     const http = new Server(app);
     http.listen(port);
   });
