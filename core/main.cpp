@@ -121,25 +121,12 @@ int main(int argc, char *argv[]) {
     int const volume = dBx * dBy * dBz;
     vector<string> blocks(volume);
 
-    if (fs::exists(fs::path(input).append("chunk"))) {
+    if (fs::exists(fs::path(input) / "chunk")) {
         int count = 0;
         for (int cz = minCz; cz <= maxCz; cz++) {
             for (int cx = minCx; cx <= maxCx; cx++) {
-                auto file = fs::path(input).append("chunk").append("c." + to_string(cx) + "." + to_string(cz) + ".nbt.z");
-                cerr << file.string() << endl;
-                auto fs = make_shared<mcfile::detail::FileStream>(file.string());
-                vector<uint8_t> buffer(fs->length());
-                fs->read(buffer.data(), 1, fs->length());
-                mcfile::detail::Compression::decompress(buffer);
-                auto root = make_shared<mcfile::nbt::CompoundTag>();
-                auto bs = make_shared<mcfile::detail::ByteStream>(buffer);
-                auto sr = make_shared<mcfile::detail::StreamReader>(bs);
-                root->read(*sr);
-                if (!root->valid()) {
-                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
-                    return 1;
-                }
-                auto const& chunk = Chunk::MakeChunk(cx, cz, *root);
+                auto file = fs::path(input) / "chunk" / Region::GetDefaultCompressedChunkNbtFileName(cx, cz);
+                auto const& chunk = Chunk::LoadFromCompressedChunkNbtFile(file.string(), cx, cz);
                 if (!chunk) {
                     PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
                     return 1;
