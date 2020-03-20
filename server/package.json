@@ -5,8 +5,8 @@
   "author": "kbinani <kbinani.bt@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "server": "ts-node src/server/main.ts run",
-    "fmt": "prettier --write 'src/server/*.ts'"
+    "server": "ts-node src/main.ts run",
+    "fmt": "prettier --write 'src/*.ts'"
   },
   "dependencies": {
     "caporal": "^1.3.0",

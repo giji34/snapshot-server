@@ -3,10 +3,10 @@ project(snapshot-server-core)
 
 include(CheckCCompilerFlag)
 
-include_directories(../../ext/libminecraft-file/include)
+include_directories(ext/libminecraft-file/include)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
 add_executable(core main.cpp
-                    ../../ext/libminecraft-file/include/minecraft-file.hpp)
+                    ext/libminecraft-file/include/minecraft-file.hpp)
 list(APPEND core_link_libraries "z")
 
 set(CMAKE_REQUIRED_FLAGS "-lstdc++fs")
