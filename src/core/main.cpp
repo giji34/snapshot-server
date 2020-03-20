@@ -111,6 +111,10 @@ int main(int argc, char *argv[]) {
     int const maxRx = Coordinate::RegionFromBlock(maxBx);
     int const minRz = Coordinate::RegionFromBlock(minBz);
     int const maxRz = Coordinate::RegionFromBlock(maxBz);
+    int const minCx = Coordinate::ChunkFromBlock(minBx);
+    int const maxCx = Coordinate::ChunkFromBlock(maxBx);
+    int const minCz = Coordinate::ChunkFromBlock(minBz);
+    int const maxCz = Coordinate::ChunkFromBlock(maxBz);
     int const dBx = maxBx - minBx + 1;
     int const dBy = maxBy - minBy + 1;
     int const dBz = maxBz - minBz + 1;
@@ -118,20 +122,60 @@ int main(int argc, char *argv[]) {
     vector<string> blocks(volume);
 
     if (fs::exists(fs::path(input).append("chunk"))) {
-        PrintError("not implemented yet");
-        return 1;
+        int count = 0;
+        for (int cz = minCz; cz <= maxCz; cz++) {
+            for (int cx = minCx; cx <= maxCx; cx++) {
+                auto file = fs::path(input).append("chunk").append("c." + to_string(cx) + "." + to_string(cz) + ".nbt.z");
+                cerr << file.string() << endl;
+                auto fs = make_shared<mcfile::detail::FileStream>(file.string());
+                vector<uint8_t> buffer(fs->length());
+                fs->read(buffer.data(), 1, fs->length());
+                mcfile::detail::Compression::decompress(buffer);
+                auto root = make_shared<mcfile::nbt::CompoundTag>();
+                auto bs = make_shared<mcfile::detail::ByteStream>(buffer);
+                auto sr = make_shared<mcfile::detail::StreamReader>(bs);
+                root->read(*sr);
+                if (!root->valid()) {
+                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
+                    return 1;
+                }
+                auto const& chunk = Chunk::MakeChunk(cx, cz, *root);
+                if (!chunk) {
+                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
+                    return 1;
+                }
+                int const minX = (std::max)(chunk->minBlockX(), minBx);
+                int const maxX = (std::min)(chunk->maxBlockX(), maxBx);
+                int const minZ = (std::max)(chunk->minBlockZ(), minBz);
+                int const maxZ = (std::min)(chunk->maxBlockZ(), maxBz);
+                for (int y = minBy; y <= maxBy; y++) {
+                    for (int z = minZ; z <= maxZ; z++) {
+                        for (int x = minX; x <= maxX; x++) {
+                            auto const& block = chunk->blockAt(x, y, z);
+                            int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
+                            if (block) {
+                                blocks[idx] = block->toString();
+                            } else {
+                                blocks[idx] = "minecraft:air";
+                            }
+                            count++;
+                        }
+                    }
+                }
+            }
+        }
     } else {
         World world(input);
         int count = 0;
         for (int rz = minRz; rz <= maxRz; rz++) {
             for (int rx = minRx; rx <= maxRx; rx++) {
                 auto const& region = world.region(rx, rz);
-                int const minCx = (std::max)(region->minChunkX(), Coordinate::ChunkFromBlock(minBx));
-                int const maxCx = (std::min)(region->maxChunkX(), Coordinate::ChunkFromBlock(maxBx));
-                int const minCz = (std::max)(region->minChunkZ(), Coordinate::ChunkFromBlock(minBz));
-                int const maxCz = (std::min)(region->maxChunkZ(), Coordinate::ChunkFromBlock(maxBz));
-                for (int cx = minCx; cx <= maxCx; cx++) {
-                    for (int cz = minCz; cz <= maxCz; cz++) {
+                int const minCxInRegion = (std::max)(region->minChunkX(), minCx);
+                int const maxCxInRegion = (std::min)(region->maxChunkX(), maxCx);
+                int const minCzInRegion = (std::max)(region->minChunkZ(), minCz);
+                int const maxCzInRegion = (std::min)(region->maxChunkZ(), maxCz);
+                for (int cx = minCxInRegion; cx <= maxCxInRegion; cx++) {
+                    for (int cz = minCzInRegion; cz <= maxCzInRegion; cz++) {
                         auto const& chunk = region->chunkAt(cx, cz);
                         if (!chunk) {
                             PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
