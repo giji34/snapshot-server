@@ -105,6 +105,9 @@ public class Main extends JavaPlugin implements Listener {
 
         int x;
         int z;
+        int numInspectedAfterLogged;
+        int numGeneratedAfterLogged;
+        long lastLoggedTimeMillis;
 
         GenerateTask(World world, int minX, int minZ, int maxX, int maxZ, String version) throws Exception {
             this.world = world;
@@ -116,6 +119,9 @@ public class Main extends JavaPlugin implements Listener {
             this.z = minZ;
             this.cancelSignaled = false;
             this.version = version;
+            this.numInspectedAfterLogged = 0;
+            this.numGeneratedAfterLogged = 0;
+            this.lastLoggedTimeMillis = 0;
             switch (world.getEnvironment()) {
                 case NETHER:
                     this.dimension = -1;
@@ -164,9 +170,17 @@ public class Main extends JavaPlugin implements Listener {
                     }
                 }
                 if (elapsed > maxElapsedMS) {
-                    System.out.println("[" + x + ", " + z + "] " + count + " chunks inspected, " + generated + " chunks generated, elapsed " + elapsed + " ms");
                     break;
                 }
+            }
+            this.numInspectedAfterLogged += count;
+            this.numGeneratedAfterLogged += generated;
+            long end = System.currentTimeMillis();
+            if (end - this.lastLoggedTimeMillis > 10 * 1000) {
+              System.out.println("[" + x + ", " + z + "] " + this.numInspectedAfterLogged + " chunks inspected, " + this.numGeneratedAfterLogged + " chunks generated");
+              this.numInspectedAfterLogged = 0;
+              this.numGeneratedAfterLogged = 0;
+              this.lastLoggedTimeMillis = end;
             }
         }
 
