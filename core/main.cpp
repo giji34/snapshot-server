@@ -35,6 +35,18 @@ static string Indent(int n) {
     }
 }
 
+static string NamespacedId(shared_ptr<Block const> const& block) {
+    if (!block) {
+        return "air";
+    }
+    string const name = block->toString();
+    if (name.find("minecraft:") == 0) {
+        return name.substr(10);
+    } else {
+        return ":" + name;
+    }
+}
+
 int main(int argc, char *argv[]) {
     string input;
     int minBx = INT_MAX;
@@ -140,11 +152,7 @@ int main(int argc, char *argv[]) {
                         for (int x = minX; x <= maxX; x++) {
                             auto const& block = chunk->blockAt(x, y, z);
                             int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
-                            if (block) {
-                                blocks[idx] = block->toString();
-                            } else {
-                                blocks[idx] = "minecraft:air";
-                            }
+                            blocks[idx] = NamespacedId(block);
                             count++;
                         }
                     }
@@ -177,11 +185,7 @@ int main(int argc, char *argv[]) {
                                 for (int x = minX; x <= maxX; x++) {
                                     auto const& block = chunk->blockAt(x, y, z);
                                     int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
-                                    if (block) {
-                                        blocks[idx] = block->toString();
-                                    } else {
-                                        blocks[idx] = "minecraft:air";
-                                    }
+                                    blocks[idx] = NamespacedId(block);
                                     count++;
                                 }
                             }
