@@ -11,10 +11,10 @@ using namespace std;
 using namespace mcfile;
 namespace fs = std::filesystem;
 
-static void print_description() {
-    cerr << "wildblocks" << endl;
+static void PrintDescription() {
+    cerr << "validate-preparation" << endl;
     cerr << "SYNOPSYS" << endl;
-    cerr << "    wildblocks -f db_directory_path -w world_directory -d dimension -v minecraft_version" << endl;
+    cerr << "    validate-preparation -f db_directory_path -w world_directory -d dimension -v minecraft_version" << endl;
     cerr << "DIMENSION" << endl;
     cerr << "    0:  Overworld" << endl;
     cerr << "    -1: The Nether" << endl;
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
                 break;
             case 'd':
                 if (sscanf(optarg, "%d", &dimension) != 1) {
-                    print_description();
+                    PrintDescription();
                     return -1;
                 }
                 break;
@@ -60,13 +60,13 @@ int main(int argc, char *argv[]) {
                 version = optarg;
                 break;
             default:
-                print_description();
+                PrintDescription();
                 return -1;
         }
     }
     
     if (argc < 5) {
-        print_description();
+        PrintDescription();
         return -1;
     }
     cout << "db:        " << dbDir << endl;
@@ -86,11 +86,10 @@ int main(int argc, char *argv[]) {
     }
 
     World world(worldDir);
-    int numRegions = CountRegionFiles(worldDir);
+    int const numRegions = CountRegionFiles(worldDir);
 
     hwm::task_queue q(thread::hardware_concurrency());
     vector<future<void>> futures;
-    string const kAirBlockName = blocks::Name(blocks::minecraft::air);
     mutex logMutex;
     int finishedRegions = 0;
     
@@ -106,7 +105,6 @@ int main(int argc, char *argv[]) {
                     }
                     auto const& chunk = region->chunkAt(chunkX, chunkZ);
                     if (chunk) {
-                        fs::path file = rootDir / ("c." + to_string(chunk->fChunkX) + "." + to_string(chunk->fChunkZ) + ".idx");
                         FILE *fp = fopen(file.c_str(), "w+b");
                         fclose(fp);
                     }
