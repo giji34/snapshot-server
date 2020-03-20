@@ -1,3 +1,9 @@
 [submodule "ext/libminecraft-file"]
 	path = core/ext/libminecraft-file
 	url = https://github.com/kbinani/libminecraft-file.git
+[submodule "tool/preparation/validator/ext/libminecraft-file"]
+	path = tool/preparation/validator/ext/libminecraft-file
+	url = https://github.com/kbinani/libminecraft-file.git
+[submodule "tool/preparation/validator/ext/hwm.task"]
+	path = tool/preparation/validator/ext/hwm.task
+	url = https://github.com/hotwatermorning/hwm.task.git
