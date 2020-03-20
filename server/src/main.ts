@@ -20,7 +20,14 @@ function getWild(wildDirectory: string, core: string) {
         minZ,
         maxZ
       } = req.query;
-      const world = path.join(wildDirectory, version, `${dimension}`);
+      let world: string;
+      if (dimension === -1) {
+        world = path.join(wildDirectory, version, "world_nether", "DIM-1");
+      } else if (dimension === 1) {
+        world = path.join(wildDirectory, version, "world_the_end", "DIM1");
+      } else {
+        world = path.join(wildDirectory, version, "world");
+      }
       const p = child_process.spawn(core, [
         "-w",
         world,
