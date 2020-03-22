@@ -13,7 +13,7 @@ import org.jetbrains.annotations.NotNull;
 import java.io.File;
 
 public class Main extends JavaPlugin implements Listener {
-    private WorldGenTask task;
+    private WorldGenerateTask task;
 
     @Override
     public void onLoad() {
@@ -71,14 +71,16 @@ public class Main extends JavaPlugin implements Listener {
         final World world = player.getWorld();
         File jar = getFile();
         File dbDirectory = new File(new File(jar.getParent(), "giji34"), "wildblocks");
-        WorldGenTask task;
+        Loc min = new Loc(minX, minZ);
+        Loc max = new Loc(maxX, maxZ);
+        WorldGenerateTask task;
         try {
-            task = new WorldGenTask(getLogger(), dbDirectory, world, minX, minZ, maxX, maxZ, version);
+            task = new WorldGenerateTask(getLogger(), dbDirectory, world, min, max, version);
         } catch (Exception e) {
             player.sendMessage(ChatColor.RED + "タスクの起動エラー");
             return true;
         }
-        task.runTaskTimer(this, 1, WorldGenTask.kPeriodTicks);
+        task.runTaskTimer(this, 1, WorldGenerateTask.kTimerIntervalTicks);
         this.task = task;
         player.sendMessage("タスクを起動しました");
         return true;
