@@ -8,13 +8,13 @@ import java.util.ArrayList;
 import java.util.logging.Logger;
 
 class GenerateTask implements Task {
-    final World world;
-    final ArrayList<Loc> chunks;
-    final double maxRunSeconds;
-    final long startMillis;
+    private final World world;
+    private final ArrayList<Loc> chunks;
+    private final double maxRunSeconds;
+    private final long startMillis;
 
-    boolean cancelSignaled = false;
-    int idx = 0;
+    private boolean cancelSignaled = false;
+    private int idx = 0;
 
     GenerateTask(World world, ArrayList<Loc> chunks, int maxTicks) {
         this.world = world;
@@ -30,8 +30,8 @@ class GenerateTask implements Task {
 
         final long start = System.currentTimeMillis();
         while (!cancelSignaled && !isFinished()) {
-            Loc loc = chunks.get(idx);
-            Chunk chunk = world.getChunkAt(loc.x, loc.z);
+            final Loc loc = chunks.get(idx);
+            final Chunk chunk = world.getChunkAt(loc.x, loc.z);
             chunk.load(true);
             chunk.unload(true);
 
