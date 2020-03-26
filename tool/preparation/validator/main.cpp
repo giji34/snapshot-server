@@ -25,13 +25,27 @@ static void PrintDescription() {
 
 static int CountRegionFiles(string worldDir) {
     int numRegions = 0;
+    cout << "couting the number of *.mca files..." << endl;
     for (auto const& e : fs::directory_iterator(fs::path(worldDir) / "region")) {
         int x, z;
         if (sscanf(e.path().filename().c_str(), "r.%d.%d.mca", &x, &z) == 2) {
             numRegions++;
         }
     }
+    cout << numRegions << " regions found" << endl;
     return numRegions;
+}
+
+static vector<string> Split(string const&s, char delim) {
+    vector<string> elems;
+    stringstream ss(s);
+    string item;
+    while (getline(ss, item, delim)) {
+        if (!item.empty()) {
+            elems.push_back(item);
+        }
+    }
+    return elems;
 }
 
 int main(int argc, char *argv[]) {
@@ -85,28 +99,49 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
+    set<pair<int, int>> existingIndex;
+    fs::path const indexFile = rootDir / "index.txt";
+    {
+        cout << "reading " << indexFile << " ..." << endl;
+        ifstream fs(indexFile.c_str());
+        string line;
+        while (getline(fs, line)) {
+            vector<string> tokens = Split(line, '\t');
+            int x;
+            if (sscanf(tokens[0].c_str(), "%d", &x) != 1) {
+                return 1;
+            }
+            int z;
+            if (sscanf(tokens[1].c_str(), "%d", &z) != 1) {
+                return 1;
+            }
+            existingIndex.insert(make_pair(x, z));
+        }
+    }
+    
     World world(worldDir);
     int const numRegions = CountRegionFiles(worldDir);
 
     hwm::task_queue q(thread::hardware_concurrency());
-    vector<future<void>> futures;
+    vector<future<set<pair<int, int>>>> futures;
     mutex logMutex;
     int finishedRegions = 0;
     
-    world.eachRegions([=, &futures, &q, &logMutex, &finishedRegions](shared_ptr<Region> const& region) {
-        futures.emplace_back(q.enqueue([=, &logMutex, &finishedRegions](shared_ptr<Region> const& region) {
+    cout << "queueing tasks..." << endl;
+    world.eachRegions([numRegions, &futures, &q, &logMutex, &finishedRegions, &existingIndex](shared_ptr<Region> const& region) {
+        futures.emplace_back(q.enqueue([numRegions, &logMutex, &finishedRegions, &existingIndex](shared_ptr<Region> const& region) {
+            set<pair<int, int>> result;
             for (int lcx = 0; lcx < 32; lcx++) {
                 int const chunkX = region->fX * 32 + lcx;
                 for (int lcz = 0; lcz < 32; lcz++) {
                     int const chunkZ = region->fZ * 32 + lcz;
-                    fs::path file = rootDir / ("c." + to_string(chunkX) + "." + to_string(chunkZ) + ".idx");
-                    if (fs::exists(file)) {
+                    pair<int, int> p = make_pair(chunkX, chunkZ);
+                    if (existingIndex.find(p) != existingIndex.end()) {
                         continue;
                     }
                     auto const& chunk = region->chunkAt(chunkX, chunkZ);
                     if (chunk) {
-                        FILE *fp = fopen(file.c_str(), "w+b");
-                        fclose(fp);
+                        result.insert(p);
                     }
                 }
             }
@@ -114,10 +149,24 @@ int main(int argc, char *argv[]) {
             lock_guard<mutex> lk(logMutex);
             finishedRegions++;
             cout << finishedRegions << "/" << numRegions << "\t" << float(finishedRegions * 100.0f / numRegions) << "%" << endl;
+            
+            return result;
         }, region));
     });
-    
-    for (auto& f : futures) {
-        f.get();
+
+    cout << "writing " << indexFile << " ..." << endl;
+    ofstream fs(indexFile.c_str());
+    for (auto it = existingIndex.begin(); it != existingIndex.end(); it++) {
+        fs << it->first << "\t" << it->second << endl;
     }
+    for (auto& f : futures) {
+        set<pair<int, int>> result = f.get();
+        for (auto it = result.begin(); it != result.end(); it++) {
+            fs << it->first << "\t" << it->second << endl;
+        }
+        fs.flush();
+    }
+    fs.close();
+        
+    cout << "finished" << endl;
 }
