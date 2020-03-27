@@ -9,7 +9,7 @@
 
 using namespace std;
 using namespace mcfile;
-namespace fs = std::filesystem;
+namespace fs = mcfile::detail::filesystem;
 
 static void PrintDescription() {
     cerr << "validate-preparation" << endl;
