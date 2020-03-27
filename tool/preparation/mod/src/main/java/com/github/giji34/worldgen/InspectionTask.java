@@ -39,7 +39,9 @@ class InspectionTask implements Task {
                         String[] tokens = line.split("\t");
                         int x = Integer.parseInt(tokens[0]);
                         int z = Integer.parseInt(tokens[1]);
-                        chunks.add(new Loc(x, z));
+                        if (min.x <= x && x <= max.x && min.z <= z && z <= max.z) {
+                            chunks.add(new Loc(x, z));
+                        }
                         lines++;
                     }
                     System.out.println(lines + " lines read");
