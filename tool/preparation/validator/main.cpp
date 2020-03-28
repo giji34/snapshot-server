@@ -89,7 +89,6 @@ int main(int argc, char *argv[]) {
     cout << "version:   " << version << endl;
 
     fs::path const rootDir = fs::path(dbDir) / version / to_string(dimension);
-    cout << "rootDir=" << rootDir << endl;
     
     if (!fs::exists(rootDir)) {
         fs::create_directories(rootDir);
@@ -126,10 +125,11 @@ int main(int argc, char *argv[]) {
     vector<future<set<pair<int, int>>>> futures;
     mutex logMutex;
     int finishedRegions = 0;
+    size_t lastLineLength = 0;
     
     cout << "queueing tasks..." << endl;
-    world.eachRegions([numRegions, &futures, &q, &logMutex, &finishedRegions, &existingIndex](shared_ptr<Region> const& region) {
-        futures.emplace_back(q.enqueue([numRegions, &logMutex, &finishedRegions, &existingIndex](shared_ptr<Region> const& region) {
+    world.eachRegions([numRegions, &futures, &q, &logMutex, &finishedRegions, &existingIndex, &lastLineLength](shared_ptr<Region> const& region) {
+        futures.emplace_back(q.enqueue([numRegions, &logMutex, &finishedRegions, &existingIndex, &lastLineLength](shared_ptr<Region> const& region) {
             set<pair<int, int>> result;
             for (int lcx = 0; lcx < 32; lcx++) {
                 int const chunkX = region->fX * 32 + lcx;
@@ -148,25 +148,31 @@ int main(int argc, char *argv[]) {
 
             lock_guard<mutex> lk(logMutex);
             finishedRegions++;
-            cout << finishedRegions << "/" << numRegions << "\t" << float(finishedRegions * 100.0f / numRegions) << "%" << endl;
-            
+            string line = to_string(finishedRegions) + "/" + to_string(numRegions) + " " + to_string(float(finishedRegions * 100.0f / numRegions)) + "%";
+            cout << "\r" << line;
+            if (line.length() < lastLineLength) {
+                cout << string(lastLineLength - line.length(), ' ');
+            }
+            lastLineLength = line.length();
             return result;
         }, region));
     });
 
-    cout << "writing " << indexFile << " ..." << endl;
     ofstream fs(indexFile.c_str());
     for (auto it = existingIndex.begin(); it != existingIndex.end(); it++) {
         fs << it->first << "\t" << it->second << endl;
     }
+    int added = 0;
     for (auto& f : futures) {
         set<pair<int, int>> result = f.get();
         for (auto it = result.begin(); it != result.end(); it++) {
             fs << it->first << "\t" << it->second << endl;
+            added++;
         }
         fs.flush();
     }
     fs.close();
-        
+
+    cout << endl << added << " chunks validated" << endl;
     cout << "finished" << endl;
 }
