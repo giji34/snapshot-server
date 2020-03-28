@@ -4,7 +4,6 @@ import org.bukkit.World;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.logging.Logger;
 
 class WorldGenerateTask extends BukkitRunnable {
@@ -53,9 +52,9 @@ class WorldGenerateTask extends BukkitRunnable {
             }
             if (inspectionTask.isFinished()) {
                 inspectionTask.printLog(logger);
-                ArrayList<Loc> chunks = inspectionTask.getChunks();
-                generateTask = new GenerateTask(world, chunks, kMaxRunningTicks);
+                SparseBlockRange2D chunks = inspectionTask.getChunks();
                 inspectionTask = null;
+                generateTask = new GenerateTask(world, chunks, kMaxRunningTicks);
             }
         } else if (generateTask != null) {
             generateTask.run();
