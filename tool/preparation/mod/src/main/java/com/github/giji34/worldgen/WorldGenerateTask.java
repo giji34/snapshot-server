@@ -7,7 +7,7 @@ import java.io.File;
 import java.util.logging.Logger;
 
 class WorldGenerateTask extends BukkitRunnable {
-    static final int kTimerIntervalTicks = 1;
+    static final int kTimerIntervalTicks = 5;
     static final int kMaxRunningTicks = 5;
     static final long kLogIntervalMillis = 10000;
 
