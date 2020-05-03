@@ -54,7 +54,7 @@ class GenerateTask implements Task {
     }
 
     public boolean isFinished() {
-        return !chunks.hasNext();
+        return !chunks.hasNext() || cancelSignaled;
     }
 
     public void printLog(Logger logger) {
