@@ -13,6 +13,7 @@ class GenerateTask implements Task {
     private final double maxRunSeconds;
     private final long startMillis;
     private final int volume;
+    private final Throttle throttle;
 
     private boolean cancelSignaled = false;
     private int idx = 0;
@@ -23,10 +24,15 @@ class GenerateTask implements Task {
         this.maxRunSeconds = maxTicks / 20.0;
         this.startMillis = System.currentTimeMillis();
         this.volume = chunks.size();
+        this.throttle = new Throttle();
     }
 
     public void run() {
         if (isFinished()) {
+            return;
+        }
+
+        if (!this.throttle.isThrottleOn()) {
             return;
         }
 
@@ -63,11 +69,13 @@ class GenerateTask implements Task {
         final float progress = idx / (float)volume * 100;
         final int remaining = volume - idx;
         final long estimatedRemainingSeconds = (long)Math.ceil(remaining / generatePerSec);
+        final double credit = throttle.getCPUCreditBalance();
+        final double maxCredit = throttle.getMaxCPUCreditBalance();
         try {
             LocalDateTime etc = LocalDateTime.now().plusSeconds(estimatedRemainingSeconds);
-            logger.info("[generate] " + idx + "/" + volume + "(" + progress + " %, ETC " + etc.toString() + ") " + generatePerSec + " [chunk/sec]");
+            logger.info("[generate] " + idx + "/" + volume + "(" + progress + " %, ETC " + etc.toString() + ") " + generatePerSec + " [chunk/sec]; cpu credit=" + credit + "/" + maxCredit);
         } catch (Exception e) {
-            logger.info("[generate] " + idx + "/" + volume + "(" + progress + " %, ETC N/A, estimated remaining seconds " + estimatedRemainingSeconds + ") " + generatePerSec + " [chunk/sec]");
+            logger.info("[generate] " + idx + "/" + volume + "(" + progress + " %, ETC N/A, estimated remaining seconds " + estimatedRemainingSeconds + ") " + generatePerSec + " [chunk/sec]; cpu credit=" + credit + "/" + maxCredit);
         }
     }
 }
