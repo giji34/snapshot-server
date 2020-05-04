@@ -47,11 +47,16 @@ class Throttle {
     }
 
     public boolean isThrottleOn() {
-        if (instanceId == null) {
+        if (isRunningOnEC2()) {
+            double credit = getCPUCreditBalance();
+            return credit > maxCPUCreditBalance * 0.2;
+        } else {
             return true;
         }
-        double credit = getCPUCreditBalance();
-        return credit > maxCPUCreditBalance * 0.2;
+    }
+
+    public boolean isRunningOnEC2() {
+        return instanceId != null;
     }
 
     public double getCPUCreditBalance() {

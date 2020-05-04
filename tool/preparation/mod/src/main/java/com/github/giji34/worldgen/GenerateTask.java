@@ -11,18 +11,18 @@ class GenerateTask implements Task {
     private final World world;
     private final Iterator<Loc> chunks;
     private final double maxRunSeconds;
-    private final long startMillis;
     private final int volume;
     private final Throttle throttle;
 
     private boolean cancelSignaled = false;
     private int idx = 0;
+    private long totalMillis = 0;
+    private double lastCPUCreditBalanceLogged = 0;
 
     GenerateTask(World world, SparseBlockRange2D chunks, int maxTicks) {
         this.world = world;
         this.chunks = chunks.iterator();
         this.maxRunSeconds = maxTicks / 20.0;
-        this.startMillis = System.currentTimeMillis();
         this.volume = chunks.size();
         this.throttle = new Throttle();
     }
@@ -37,6 +37,7 @@ class GenerateTask implements Task {
         }
 
         final long start = System.currentTimeMillis();
+        long elapsed = 0;
         while (!cancelSignaled && chunks.hasNext()) {
             final Loc loc = chunks.next();
             world.loadChunk(loc.x, loc.z, true);
@@ -44,12 +45,15 @@ class GenerateTask implements Task {
 
             idx++;
 
-            final long elapsed = System.currentTimeMillis() - start;
+            elapsed = System.currentTimeMillis() - start;
             final double sec = elapsed / 1000.0;
             if (sec >= maxRunSeconds) {
                 break;
             }
         }
+
+        this.totalMillis += elapsed;
+
         if (isFinished()) {
             System.out.println("[generate] finished");
         }
@@ -64,18 +68,24 @@ class GenerateTask implements Task {
     }
 
     public void printLog(Logger logger) {
-        final float sec = (System.currentTimeMillis() - startMillis) / 1000.0f;
+        final float sec = totalMillis / 1000.0f;
         final float generatePerSec = idx / sec;
         final float progress = idx / (float)volume * 100;
         final int remaining = volume - idx;
         final long estimatedRemainingSeconds = (long)Math.ceil(remaining / generatePerSec);
         final double credit = throttle.getCPUCreditBalance();
         final double maxCredit = throttle.getMaxCPUCreditBalance();
+        String etcStr;
         try {
             LocalDateTime etc = LocalDateTime.now().plusSeconds(estimatedRemainingSeconds);
-            logger.info("[generate] " + idx + "/" + volume + "(" + progress + " %, ETC " + etc.toString() + ") " + generatePerSec + " [chunk/sec]; cpu credit=" + credit + "/" + maxCredit);
+            etcStr = etc.toString();
         } catch (Exception e) {
-            logger.info("[generate] " + idx + "/" + volume + "(" + progress + " %, ETC N/A, estimated remaining seconds " + estimatedRemainingSeconds + ") " + generatePerSec + " [chunk/sec]; cpu credit=" + credit + "/" + maxCredit);
+            etcStr = "N/A";
         }
+        if (throttle.isRunningOnEC2() && !throttle.isThrottleOn() && lastCPUCreditBalanceLogged == credit) {
+            return;
+        }
+        logger.info("[generate] " + idx + "/" + volume + "(" + progress + " %, ETC " + etcStr + ") " + generatePerSec + " [chunk/sec]; cpu credit=" + credit + "/" + maxCredit);
+        lastCPUCreditBalanceLogged = credit;
     }
 }
