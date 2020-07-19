@@ -43,7 +43,7 @@ function getWild(wildDirectory: string, core: string) {
         "-z",
         minZ,
         "-Z",
-        maxZ
+        maxZ,
       ]);
       p.stdout.pipe(res);
       p.stderr.pipe(process.stderr);
@@ -70,7 +70,7 @@ async function checkoutByHash(
   const minCz = minZ >> 4;
   const maxCz = maxZ >> 4;
   const chunkDir = path.join(directory, "chunk");
-  const promises: Promise<void>[] = stdout.split("\n").map(line => {
+  const promises: Promise<void>[] = stdout.split("\n").map((line) => {
     return new Promise((resolve, reject) => {
       if (line.length < 1) {
         resolve();
@@ -86,7 +86,7 @@ async function checkoutByHash(
         return;
       }
       const catFile = child_process.spawn("git", ["cat-file", "-p", blobHash], {
-        cwd: historyDirectory
+        cwd: historyDirectory,
       });
       const destination = path.join(chunkDir, name);
       fs.open(destination, "w", (err, fd) => {
@@ -95,7 +95,7 @@ async function checkoutByHash(
           reject();
           return;
         }
-        catFile.stdout.on("data", data => {
+        catFile.stdout.on("data", (data) => {
           fs.writeSync(fd, data);
         });
         catFile.on("close", () => {
@@ -134,7 +134,7 @@ function sendByHash(
     maxY,
     minZ,
     maxZ,
-    historyDirectory
+    historyDirectory,
   } = params;
 
   const tmp = mkdtempSync("snapshotserver");
@@ -148,7 +148,7 @@ function sendByHash(
     grepKeyword = "world_the_end/DIM1/chunk";
   }
   const lstree = child_process.spawn("git", ["ls-tree", "-r", hash], {
-    cwd: historyDirectory
+    cwd: historyDirectory,
   });
   const grep = child_process.spawn("grep", [grepKeyword]);
   const awk = child_process.spawn("awk", ["{print $3, $4}"]);
@@ -158,7 +158,7 @@ function sendByHash(
   grep.stdout.pipe(awk.stdin);
   grep.stderr.pipe(process.stderr);
   let dumped = "";
-  awk.stdout.on("data", data => {
+  awk.stdout.on("data", (data) => {
     dumped += data;
   });
   awk.on("close", async () => {
@@ -167,7 +167,7 @@ function sendByHash(
       minX,
       maxX,
       minZ,
-      maxZ
+      maxZ,
     });
     const p = child_process.spawn(core, [
       "-w",
@@ -183,7 +183,7 @@ function sendByHash(
       "-z",
       `${minZ}`,
       "-Z",
-      `${maxZ}`
+      `${maxZ}`,
     ]);
     p.stdout.pipe(res);
     p.on("close", () => {
@@ -211,12 +211,12 @@ function getHistory(historyDirectory: string, core: string) {
       "bash",
       [
         "-c",
-        `(echo '${d},x'; git log --pretty='%ad,%H' --author-date-order --date='format:%Y%m%d%H%M%S') | sort | grep -A 1 '${d},x' | tail -1 | cut -d , -f 2`
+        `(echo '${d},x'; git log --pretty='%ad,%H' --author-date-order --date='format:%Y%m%d%H%M%S') | sort | grep -A 1 '${d},x' | tail -1 | cut -d , -f 2`,
       ],
       { cwd: historyDirectory }
     );
     let hash = "";
-    log.stdout.on("data", data => {
+    log.stdout.on("data", (data) => {
       hash += data;
     });
     log.on("close", () => {
@@ -230,7 +230,7 @@ function getHistory(historyDirectory: string, core: string) {
         minY,
         maxY,
         minZ,
-        maxZ
+        maxZ,
       });
     });
   };
