@@ -140,7 +140,10 @@ int main(int argc, char *argv[]) {
                         continue;
                     }
                     auto const& chunk = region->chunkAt(chunkX, chunkZ);
-                    if (chunk) {
+                    if (!chunk) {
+                        continue;
+                    }
+                    if (chunk->fStatus == "full") {
                         result.insert(p);
                     }
                 }
