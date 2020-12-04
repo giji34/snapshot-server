@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
 
                             int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
                             blocks[idx] = BlockName(block);
-                            biomes[idx] = NamespacedId(mcfile::biomes::Name(biome));
+                            biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->fDataVersion));
                             count++;
                         }
                     }
@@ -242,7 +242,7 @@ int main(int argc, char *argv[]) {
 
                                     int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
                                     blocks[idx] = BlockName(block);
-                                    biomes[idx] = NamespacedId(mcfile::biomes::Name(biome));
+                                    biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->fDataVersion));
                                     count++;
                                 }
                             }
