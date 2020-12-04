@@ -194,6 +194,10 @@ int main(int argc, char *argv[]) {
                     PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
                     return 1;
                 }
+                if (chunk->fStatus != "full") {
+                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] is incomplete. status=" + chunk->fStatus);
+                    return 1;
+                }
                 int const minX = (std::max)(chunk->minBlockX(), minBx);
                 int const maxX = (std::min)(chunk->maxBlockX(), maxBx);
                 int const minZ = (std::max)(chunk->minBlockZ(), minBz);
@@ -228,6 +232,10 @@ int main(int argc, char *argv[]) {
                         auto const& chunk = region->chunkAt(cx, cz);
                         if (!chunk) {
                             PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
+                            return 1;
+                        }
+                        if (chunk->fStatus != "full") {
+                            PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] is incomplete. status=" + chunk->fStatus);
                             return 1;
                         }
                         int const minX = (std::max)(chunk->minBlockX(), minBx);
