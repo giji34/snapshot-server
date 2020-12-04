@@ -156,6 +156,7 @@ int main(int argc, char *argv[]) {
             lastLineLength = line.length();
             return result;
         }, region));
+        return true;
     });
 
     ofstream fs(indexFile.c_str());
