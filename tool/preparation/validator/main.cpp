@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
                     if (!chunk) {
                         continue;
                     }
-                    if (chunk->fStatus == "full") {
+                    if (chunk->status() == Chunk::Status::FULL) {
                         result.insert(p);
                     }
                 }
