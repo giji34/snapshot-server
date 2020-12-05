@@ -194,8 +194,8 @@ int main(int argc, char *argv[]) {
                     PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
                     return 1;
                 }
-                if (chunk->fStatus != "full") {
-                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] is incomplete. status=" + chunk->fStatus);
+                if (chunk->status() != Chunk::Status::FULL) {
+                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] is incomplete");
                     return 1;
                 }
                 int const minX = (std::max)(chunk->minBlockX(), minBx);
@@ -234,8 +234,8 @@ int main(int argc, char *argv[]) {
                             PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
                             return 1;
                         }
-                        if (chunk->fStatus != "full") {
-                            PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] is incomplete. status=" + chunk->fStatus);
+                        if (chunk->status() != Chunk::Status::FULL) {
+                            PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] is incomplete");
                             return 1;
                         }
                         int const minX = (std::max)(chunk->minBlockX(), minBx);
