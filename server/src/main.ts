@@ -53,10 +53,11 @@ function getWild(wildDirectory: string, core: string) {
   };
 }
 
-async function checkoutByHash(
+async function checkoutByRevision(
   directory: string,
   stdout: string,
   params: {
+    rev: string;
     historyDirectory: string;
     minX: number;
     maxX: number;
@@ -64,7 +65,7 @@ async function checkoutByHash(
     maxZ: number;
   }
 ) {
-  const { historyDirectory, minX, maxX, minZ, maxZ } = params;
+  const { rev, historyDirectory, minX, maxX, minZ, maxZ } = params;
   const minCx = minX >> 4;
   const maxCx = maxX >> 4;
   const minCz = minZ >> 4;
@@ -76,7 +77,7 @@ async function checkoutByHash(
         resolve();
         return;
       }
-      const [blobHash, filePath] = line.split(" ");
+      const filePath = line;
       const name = path.basename(filePath); // c.-113.198.nbt.z
       const tokens = name.split(".");
       const cx = parseInt(tokens[1]);
@@ -85,7 +86,7 @@ async function checkoutByHash(
         resolve();
         return;
       }
-      const catFile = child_process.spawn("git", ["cat-file", "-p", blobHash], {
+      const catFile = child_process.spawn("hg", ["cat", "-r", rev, filePath], {
         cwd: historyDirectory,
       });
       const destination = path.join(chunkDir, name);
@@ -108,13 +109,13 @@ async function checkoutByHash(
   await Promise.all(promises);
 }
 
-function sendByHash(
+function sendByRevision(
   req,
   res,
   params: {
     core: string;
     historyDirectory: string;
-    hash: string;
+    rev: string;
     dimension: number;
     minX: number;
     maxX: number;
@@ -126,7 +127,7 @@ function sendByHash(
 ) {
   const {
     core,
-    hash,
+    rev,
     dimension,
     minX,
     maxX,
@@ -147,22 +148,21 @@ function sendByHash(
   } else if (dimension === 1) {
     grepKeyword = "world_the_end/DIM1/chunk";
   }
-  const lstree = child_process.spawn("git", ["ls-tree", "-r", hash], {
+  const files = child_process.spawn("hg", ["files", "-r", rev], {
     cwd: historyDirectory,
   });
   const grep = child_process.spawn("grep", [grepKeyword]);
-  const awk = child_process.spawn("awk", ["{print $3, $4}"]);
 
-  lstree.stdout.pipe(grep.stdin);
-  lstree.stderr.pipe(process.stderr);
-  grep.stdout.pipe(awk.stdin);
+  files.stdout.pipe(grep.stdin);
+  files.stderr.pipe(process.stderr);
   grep.stderr.pipe(process.stderr);
-  let dumped = "";
-  awk.stdout.on("data", (data) => {
-    dumped += data;
+  let stdout = "";
+  grep.stdout.on("data", (data) => {
+    stdout += data;
   });
-  awk.on("close", async () => {
-    await checkoutByHash(tmp, dumped, {
+  grep.on("close", async () => {
+    await checkoutByRevision(tmp, stdout, {
+      rev,
       historyDirectory,
       minX,
       maxX,
@@ -197,7 +197,7 @@ function getHistory(historyDirectory: string, core: string) {
     const { dimension, time, minX, maxX, minY, maxY, minZ, maxZ } = req.query;
     const date = new Date(time * 1000);
     const d = sprintf(
-      "%d%02d%02d%02d%02d%02d",
+      "%d-%02d-%02d %02d:%02d:%02d",
       date.getFullYear(),
       date.getMonth() + 1,
       date.getDate(),
@@ -205,25 +205,20 @@ function getHistory(historyDirectory: string, core: string) {
       date.getMinutes(),
       date.getSeconds()
     );
-    //NOTE: git log --before を使いたいが, before は commit date に対して効く(--author-date-order を指定したとしても).
-    // author date で見たいので自力でソートする.
     const log = child_process.spawn(
-      "bash",
-      [
-        "-c",
-        `(echo '${d},x'; git log --pretty='%ad,%H' --author-date-order --date='format:%Y%m%d%H%M%S') | sort | grep -A 1 '${d},x' | tail -1 | cut -d , -f 2`,
-      ],
+      "hg",
+      ["log", "-d", `< ${d} +0900`, "--limit", "1", "--template", "{rev}"],
       { cwd: historyDirectory }
     );
-    let hash = "";
+    let rev = "";
     log.stdout.on("data", (data) => {
-      hash += data;
+      rev += data;
     });
     log.on("close", () => {
-      sendByHash(req, res, {
+      sendByRevision(req, res, {
         core,
         historyDirectory,
-        hash: hash.trim(),
+        rev: rev.trim(),
         dimension: parseInt(dimension, 10),
         minX,
         maxX,
