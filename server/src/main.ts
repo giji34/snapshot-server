@@ -215,6 +215,13 @@ function getHistory(historyDirectory: string, core: string) {
       rev += data;
     });
     log.on("close", () => {
+      const r = rev.trim();
+      if (r === "") {
+        res
+          .status(500)
+          .send(`{status:"cannot find backup data for timestamp: ${d}"}`);
+        return;
+      }
       sendByRevision(req, res, {
         core,
         historyDirectory,
