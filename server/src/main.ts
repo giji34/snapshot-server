@@ -3,7 +3,7 @@ import { Server } from "http";
 import * as caporal from "caporal";
 import * as path from "path";
 import * as child_process from "child_process";
-import * as sprintf from "sprintf-js";
+import { sprintf } from "sprintf-js";
 import { mkdirSync, mkdtempSync, rmdir } from "fs";
 import * as fs from "fs";
 
