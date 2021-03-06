@@ -3,7 +3,7 @@ import { Server } from "http";
 import * as caporal from "caporal";
 import * as path from "path";
 import * as child_process from "child_process";
-import { sprintf } from "sprintf-js";
+import * as sprintf from "sprintf-js";
 import { mkdirSync, mkdtempSync, rmdir } from "fs";
 import * as fs from "fs";
 
@@ -53,11 +53,10 @@ function getWild(wildDirectory: string, core: string) {
   };
 }
 
-async function checkoutByRevision(
+async function checkoutByHash(
   directory: string,
   stdout: string,
   params: {
-    rev: string;
     historyDirectory: string;
     minX: number;
     maxX: number;
@@ -65,7 +64,7 @@ async function checkoutByRevision(
     maxZ: number;
   }
 ) {
-  const { rev, historyDirectory, minX, maxX, minZ, maxZ } = params;
+  const { historyDirectory, minX, maxX, minZ, maxZ } = params;
   const minCx = minX >> 4;
   const maxCx = maxX >> 4;
   const minCz = minZ >> 4;
@@ -77,7 +76,7 @@ async function checkoutByRevision(
         resolve();
         return;
       }
-      const filePath = line;
+      const [blobHash, filePath] = line.split(" ");
       const name = path.basename(filePath); // c.-113.198.nbt.z
       const tokens = name.split(".");
       const cx = parseInt(tokens[1]);
@@ -86,7 +85,7 @@ async function checkoutByRevision(
         resolve();
         return;
       }
-      const catFile = child_process.spawn("hg", ["cat", "-r", rev, filePath], {
+      const catFile = child_process.spawn("git", ["cat-file", "-p", blobHash], {
         cwd: historyDirectory,
       });
       const destination = path.join(chunkDir, name);
@@ -109,13 +108,13 @@ async function checkoutByRevision(
   await Promise.all(promises);
 }
 
-function sendByRevision(
+function sendByHash(
   req,
   res,
   params: {
     core: string;
     historyDirectory: string;
-    rev: string;
+    hash: string;
     dimension: number;
     minX: number;
     maxX: number;
@@ -127,7 +126,7 @@ function sendByRevision(
 ) {
   const {
     core,
-    rev,
+    hash,
     dimension,
     minX,
     maxX,
@@ -148,21 +147,22 @@ function sendByRevision(
   } else if (dimension === 1) {
     grepKeyword = "world_the_end/DIM1/chunk";
   }
-  const files = child_process.spawn("hg", ["files", "-r", rev], {
+  const lstree = child_process.spawn("git", ["ls-tree", "-r", hash], {
     cwd: historyDirectory,
   });
   const grep = child_process.spawn("grep", [grepKeyword]);
+  const awk = child_process.spawn("awk", ["{print $3, $4}"]);
 
-  files.stdout.pipe(grep.stdin);
-  files.stderr.pipe(process.stderr);
+  lstree.stdout.pipe(grep.stdin);
+  lstree.stderr.pipe(process.stderr);
+  grep.stdout.pipe(awk.stdin);
   grep.stderr.pipe(process.stderr);
-  let stdout = "";
-  grep.stdout.on("data", (data) => {
-    stdout += data;
+  let dumped = "";
+  awk.stdout.on("data", (data) => {
+    dumped += data;
   });
-  grep.on("close", async () => {
-    await checkoutByRevision(tmp, stdout, {
-      rev,
+  awk.on("close", async () => {
+    await checkoutByHash(tmp, dumped, {
       historyDirectory,
       minX,
       maxX,
@@ -197,7 +197,7 @@ function getHistory(historyDirectory: string, core: string) {
     const { dimension, time, minX, maxX, minY, maxY, minZ, maxZ } = req.query;
     const date = new Date(time * 1000);
     const d = sprintf(
-      "%d-%02d-%02d %02d:%02d:%02d",
+      "%d%02d%02d%02d%02d%02d",
       date.getFullYear(),
       date.getMonth() + 1,
       date.getDate(),
@@ -205,27 +205,25 @@ function getHistory(historyDirectory: string, core: string) {
       date.getMinutes(),
       date.getSeconds()
     );
+    //NOTE: git log --before を使いたいが, before は commit date に対して効く(--author-date-order を指定したとしても).
+    // author date で見たいので自力でソートする.
     const log = child_process.spawn(
-      "hg",
-      ["log", "-d", `< ${d} +0900`, "--limit", "1", "--template", "{rev}"],
+      "bash",
+      [
+        "-c",
+        `(echo '${d},x'; git log --pretty='%ad,%H' --author-date-order --date='format:%Y%m%d%H%M%S') | sort | grep -A 1 '${d},x' | tail -1 | cut -d , -f 2`,
+      ],
       { cwd: historyDirectory }
     );
-    let rev = "";
+    let hash = "";
     log.stdout.on("data", (data) => {
-      rev += data;
+      hash += data;
     });
     log.on("close", () => {
-      const r = rev.trim();
-      if (r === "") {
-        res
-          .status(500)
-          .send(`{status:"cannot find backup data for timestamp: ${d}"}`);
-        return;
-      }
-      sendByRevision(req, res, {
+      sendByHash(req, res, {
         core,
         historyDirectory,
-        rev: rev.trim(),
+        hash: hash.trim(),
         dimension: parseInt(dimension, 10),
         minX,
         maxX,
