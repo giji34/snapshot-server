@@ -54,7 +54,15 @@ static string BlockName(shared_ptr<Block const> const& block) {
     return NamespacedId(block->toString());
 }
 
-template<class T, class V>
+static string Quote(string const& v) {
+    return "\"" + v + "\"";
+}
+
+static string IntToString(int v) {
+    return to_string(v);
+}
+
+template <class T, class V>
 static void PrintVectorContent(vector<T> const& v, int indent, function<V(T const& v)> convert) {
     auto nl = NewLine();
     auto it = v.begin();
@@ -70,27 +78,26 @@ static void PrintVectorContent(vector<T> const& v, int indent, function<V(T cons
     }
 }
 
-static void PrintPaletteAndIndices(vector<string> const& list, int indent, string const& nl) {
-    map<string, int> usage;
-    for_each(list.begin(), list.end(), [&usage](string const& b) {
+template <class T>
+static void PrintPaletteAndIndices(vector<T> const& list, int indent, string const& nl, function<string(T const& v)> convert) {
+    map<T, int> usage;
+    for_each(list.begin(), list.end(), [&usage](T const& b) {
         usage[b] += 1;
     });
-    vector<string> palette;
+    vector<T> palette;
     palette.reserve(usage.size());
     for_each(usage.begin(), usage.end(), [&palette](auto it) {
         palette.push_back(it.first);
     });
-    sort(palette.begin(), palette.end(), [&usage](string const& a, string const& b) {
+    sort(palette.begin(), palette.end(), [&usage](T const& a, T const& b) {
         return usage[a] > usage[b];
     });
 
     cout << Indent(indent) << "palette:[" << nl;
-    PrintVectorContent<string, string>(palette, indent + 1, [](string const& v) {
-        return "\"" + v + "\"";
-    });
+    PrintVectorContent<T, string>(palette, indent + 1, convert);
     cout << Indent(indent) << "]," << nl;
     cout << Indent(indent) << "indices:[" << nl;
-    PrintVectorContent<string, int>(list, indent + 1, [&palette](string const& b) {
+    PrintVectorContent<T, int>(list, indent + 1, [&palette](T const& b) {
         auto found = find(palette.begin(), palette.end(), b);
         return distance(palette.begin(), found);
     });
@@ -183,6 +190,7 @@ int main(int argc, char *argv[]) {
     int const volume = dBx * dBy * dBz;
     vector<string> blocks(volume);
     vector<string> biomes(volume);
+    vector<int> versions(volume);
 
     if (fs::exists(fs::path(input) / "chunk")) {
         int count = 0;
@@ -211,6 +219,7 @@ int main(int argc, char *argv[]) {
                             int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
                             blocks[idx] = BlockName(block);
                             biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->fDataVersion));
+                            versions[idx] = chunk->fDataVersion;
                             count++;
                         }
                     }
@@ -251,6 +260,7 @@ int main(int argc, char *argv[]) {
                                     int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
                                     blocks[idx] = BlockName(block);
                                     biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->fDataVersion));
+                                    versions[idx] = chunk->fDataVersion;
                                     count++;
                                 }
                             }
@@ -263,10 +273,14 @@ int main(int argc, char *argv[]) {
     cout << "{" << nl;
     cout << Indent(1) << "status:\"ok\"," << nl;
     cout << Indent(1) << "block:{" << nl;
-    PrintPaletteAndIndices(blocks, 2, nl);
+    PrintPaletteAndIndices<string>(blocks, 2, nl, Quote);
     cout << Indent(1) << "}," << nl;
     cout << Indent(1) << "biome:{" << nl;
-    PrintPaletteAndIndices(biomes, 2, nl);
+    PrintPaletteAndIndices<string>(biomes, 2, nl, Quote);
+    cout << Indent(1) << "}," << nl;
+    cout << Indent(1) << "version:{" << nl;
+    PrintPaletteAndIndices<int>(versions, 2, nl, IntToString);
     cout << Indent(1) << "}" << nl;
     cout << "}" << nl;
 }
+
