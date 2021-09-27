@@ -5,7 +5,8 @@
 
 using namespace std;
 using namespace mcfile;
-namespace fs = mcfile::detail::filesystem;
+using namespace mcfile::je;
+namespace fs = std::filesystem;
 
 static void PrintError(string const& message) {
     cerr << "core -w [world directory] -x [min block x] -X [max block x] -y [min block y] -Y [max block y] -z [min block z] -Z [max block z]" << endl;
@@ -105,7 +106,7 @@ static void PrintPaletteAndIndices(vector<T> const& list, int indent, string con
 }
 
 int main(int argc, char *argv[]) {
-    string input;
+    fs::path input;
     int minBx = INT_MAX;
     int maxBx = INT_MIN;
     int minBy = INT_MAX;
