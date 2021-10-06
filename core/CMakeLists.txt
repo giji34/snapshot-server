@@ -7,10 +7,11 @@ if (NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
-add_executable(core main.cpp
-                    ext/libminecraft-file/include/minecraft-file.hpp)
+add_executable(core
+  main.cpp
+  ../ext/libminecraft-file/include/minecraft-file.hpp)
 
-target_include_directories(core PRIVATE ext/libminecraft-file/include)
+target_include_directories(core PRIVATE ../ext/libminecraft-file/include)
 
 list(APPEND core_link_libraries "z")
 
