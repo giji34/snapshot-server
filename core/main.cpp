@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
         for (int cz = minCz; cz <= maxCz; cz++) {
             for (int cx = minCx; cx <= maxCx; cx++) {
                 auto file = fs::path(input) / "chunk" / Region::GetDefaultCompressedChunkNbtFileName(cx, cz);
-                auto const& chunk = Chunk::LoadFromCompressedChunkNbtFile(file.string(), cx, cz);
+                auto const& chunk = Chunk::LoadFromCompressedChunkNbtFile(file, cx, cz);
                 if (!chunk) {
                     PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
                     return 1;
@@ -225,6 +225,76 @@ int main(int argc, char *argv[]) {
                         }
                     }
                 }
+            }
+        }
+    } else if (fs::exists(fs::path(input) / "squashed_region")) {
+        int count = 0;
+        for (int cz = minCz; cz <= maxCz; cz++) {
+            for (int cx = minCx; cx <= maxCx; cx++) {
+                int rx = Coordinate::RegionFromChunk(cx);
+                int rz = Coordinate::RegionFromChunk(cz);
+                string name = "s." + to_string(rx) + "." + to_string(rz) + ".mca";
+                auto file = fs::path(input) / "squashed_region" / name;
+                FILE *in = File::Open(file, File::Mode::Read);
+                if (!in) {
+                    PrintError("region [" + to_string(rx) + ", " + to_string(rz) + "] not saved yet");
+                    return 1;
+                }
+                int cxOffset = cx - rx * 32;
+                int czOffset = cz - rz * 32;
+                int index = czOffset * 32 + cxOffset;
+                uint32_t pos = 0;
+                if (!File::Fseek(in, index, SEEK_SET)) {
+                    PrintError("Cannot read chunk index: " + name);
+                    fclose(in);
+                    return 1;
+                }
+                if (!File::Fread(&pos, sizeof(pos), 1, in)) {
+                    PrintError("Cannot read chunk position from index: " + name);
+                    fclose(in);
+                    return 1;
+                }
+                uint32_t size = 0;
+                if (!File::Fread(&size, sizeof(size), 1, in)) {
+                    PrintError("Cannot read chunk size from index: " + name);
+                    fclose(in);
+                    return 1;
+                }
+                if (!File::Fseek(in, pos, SEEK_SET)) {
+                    PrintError("Failed seeking to chunk position: " + name);
+                    fclose(in);
+                    return 1;
+                }
+                auto const& chunk = Chunk::LoadFromCompressedChunkNbtFile(in, size, cx, cz);
+                if (!chunk) {
+                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
+                    fclose(in);
+                    return 1;
+                }
+                if (chunk->status() != Chunk::Status::FULL) {
+                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] is incomplete");
+                    fclose(in);
+                    return 1;
+                }
+                int const minX = (std::max)(chunk->minBlockX(), minBx);
+                int const maxX = (std::min)(chunk->maxBlockX(), maxBx);
+                int const minZ = (std::max)(chunk->minBlockZ(), minBz);
+                int const maxZ = (std::min)(chunk->maxBlockZ(), maxBz);
+                for (int y = minBy; y <= maxBy; y++) {
+                    for (int z = minZ; z <= maxZ; z++) {
+                        for (int x = minX; x <= maxX; x++) {
+                            auto const& block = chunk->blockAt(x, y, z);
+                            auto const biome = chunk->biomeAt(x, y, z);
+
+                            int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
+                            blocks[idx] = BlockName(block);
+                            biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->fDataVersion));
+                            versions[idx] = chunk->fDataVersion;
+                            count++;
+                        }
+                    }
+                }
+                fclose(in);
             }
         }
     } else {

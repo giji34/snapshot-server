@@ -31,7 +31,7 @@ bool SquashRegionFiles(fs::path worldDirectory) {
             fs::remove(squashedFile);
             return false;
         }
-        vector<uint32_t> index(32 * 32);
+        vector<uint32_t> index(32 * 32 * 2);
         int count = 0;
         uint64_t totalSize = 0;
         for (int cz = region->minChunkZ(); cz <= region->maxChunkZ(); cz++) {
@@ -46,8 +46,9 @@ bool SquashRegionFiles(fs::path worldDirectory) {
                         fs::remove(squashedFile);
                         return false;
                     }
-                    index[count] = *pos;
                     auto size = fs::file_size(chunkFile);
+                    index[count] = *pos;
+                    index[count + 1] = size;
                     totalSize += size;
                     FILE *in = File::Open(chunkFile, File::Mode::Read);
                     if (!in) {
@@ -68,8 +69,9 @@ bool SquashRegionFiles(fs::path worldDirectory) {
                     fs::remove(chunkFile);
                 } else {
                     index[count] = 0;
+                    index[count + 1] = 0;
                 }
-                count++;
+                count += 2;
             }
         }
         
