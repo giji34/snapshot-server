@@ -242,7 +242,7 @@ int main(int argc, char *argv[]) {
                 }
                 int cxOffset = cx - rx * 32;
                 int czOffset = cz - rz * 32;
-                int index = czOffset * 32 + cxOffset;
+                int index = (czOffset * 32 + cxOffset) * sizeof(uint32_t) * 2;
                 uint32_t pos = 0;
                 if (!File::Fseek(in, index, SEEK_SET)) {
                     PrintError("Cannot read chunk index: " + name);
