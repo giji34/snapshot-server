@@ -114,7 +114,11 @@ bool SquashRegionFiles(fs::path worldDirectory) {
     World w(worldDirectory);
     auto squashed = worldDirectory / "squashed_region";
     fs::create_directories(squashed);
-    auto tmp = File::CreateTempDir(fs::temp_directory_path());
+    fs::path temp_directory = fs::temp_directory_path();
+    if (fs::exists(fs::path("/tmp")) && fs::is_directory(fs::path("/tmp"))) {
+        temp_directory = fs::path("/tmp");
+    }
+    auto tmp = File::CreateTempDir(temp_directory);
     if (!tmp) {
         cerr << "Error: cannot create temporary directory" << endl;
         return false;
