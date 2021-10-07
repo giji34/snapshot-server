@@ -101,7 +101,8 @@ bool SquashRegionFile(shared_ptr<Region> const& r, fs::path tmp, fs::path squash
     cout << (beforeSize / 1024.f) << " KiB -> ";
     cout << (afterSize / 1024.f) << " KiB (" << (diff < 0 ? "" : "+") << (diff * 100.0f / beforeSize) << "%)" << endl;
     
-    fs::remove(regionFile);
+    fs::remove(region->fFilePath);
+    fs::remove(r->fFilePath);
     
     fs::remove(squashed / name);
     fs::copy_file(squashedFile, squashed / name);
