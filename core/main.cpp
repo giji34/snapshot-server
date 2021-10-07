@@ -233,7 +233,7 @@ int main(int argc, char *argv[]) {
             for (int cx = minCx; cx <= maxCx; cx++) {
                 int rx = Coordinate::RegionFromChunk(cx);
                 int rz = Coordinate::RegionFromChunk(cz);
-                string name = "s." + to_string(rx) + "." + to_string(rz) + ".mca";
+                string name = "s." + to_string(rx) + "." + to_string(rz) + ".smca";
                 auto file = fs::path(input) / "squashed_region" / name;
                 FILE *in = File::Open(file, File::Mode::Read);
                 if (!in) {
