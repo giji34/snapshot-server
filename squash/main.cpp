@@ -40,7 +40,7 @@ bool SquashRegionFiles(fs::path worldDirectory) {
             cerr << "Error: cannot open file: " << (squashed / name) << endl;
             return false;
         }
-        if (!File::Fseek(file, sizeof(uint32_t) * 32 * 32, SEEK_SET)) {
+        if (!File::Fseek(file, sizeof(uint32_t) * 32 * 32 * 2, SEEK_SET)) {
             cerr << "Error: fseek failed: " << (squashed / name) << endl;
             fclose(file);
             fs::remove(squashedFile);
