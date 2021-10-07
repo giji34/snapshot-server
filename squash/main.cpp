@@ -34,7 +34,7 @@ bool SquashRegionFiles(fs::path worldDirectory) {
         }
 
         string name = "s." + to_string(region->fX) + "." + to_string(region->fZ) + ".mca";
-        fs::path squashedFile = squashed / name;
+        fs::path squashedFile = *tmp / name;
         FILE* file = File::Open(squashedFile, File::Mode::Write);
         if (!file) {
             cerr << "Error: cannot open file: " << (squashed / name) << endl;
@@ -113,6 +113,7 @@ bool SquashRegionFiles(fs::path worldDirectory) {
         
         fs::remove(regionFile);
         fs::remove(region->fFilePath);
+        fs::rename(squashedFile, squashed / name);
         
         return true;
     });
