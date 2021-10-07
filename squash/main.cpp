@@ -111,6 +111,12 @@ bool SquashRegionFile(shared_ptr<Region> const& r, fs::path tmp, fs::path squash
 }
 
 bool SquashRegionFiles(fs::path worldDirectory) {
+    if (!fs::exists(worldDirectory)) {
+        return false;
+    }
+    if (!fs::is_directory(worldDirectory)) {
+        return false;
+    }
     World w(worldDirectory);
     auto squashed = worldDirectory / "squashed_region";
     fs::create_directories(squashed);
@@ -145,6 +151,14 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     fs::path root = argv[1];
+    if (!fs::exists(root)) {
+        cerr << "Error: root directory does not exists: " << root << endl;
+        return 1;
+    }
+    if (!fs::is_directory(root)) {
+        cerr << "Error: " << root << " is not a directory" << endl;
+        return 1;
+    }
     SquashRegionFiles(root / "world");
     SquashRegionFiles(root / "world_nether" / "DIM-1");
     SquashRegionFiles(root / "world_the_end" / "DIM1");
