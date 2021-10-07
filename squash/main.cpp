@@ -12,12 +12,27 @@ bool SquashRegionFiles(fs::path worldDirectory) {
     World w(worldDirectory);
     auto squashed = worldDirectory / "squashed_region";
     fs::create_directories(squashed);
-    bool ok = w.eachRegions([worldDirectory, squashed](shared_ptr<Region> const& region) {
-        auto beforeSize = fs::file_size(region->fFilePath);
+    auto tmp = File::CreateTempDir(std::filesystem::temp_directory_path());
+    if (!tmp) {
+        cerr << "Error: cannot create temporary directory" << endl;
+        return false;
+    }
+    
+    bool ok = w.eachRegions([worldDirectory, squashed, tmp](shared_ptr<Region> const& r) {
+        auto beforeSize = fs::file_size(r->fFilePath);
         if (beforeSize == 0) {
             return true;
         }
-        
+
+        fs::path regionFile = *tmp / r->fFilePath.filename();
+        fs::copy_file(r->fFilePath, regionFile);
+        auto region = Region::MakeRegion(regionFile);
+        if (!region) {
+            cerr << "Error: failed loading region from " << regionFile << endl;
+            fs::remove(regionFile);
+            return false;
+        }
+
         string name = "s." + to_string(region->fX) + "." + to_string(region->fZ) + ".mca";
         fs::path squashedFile = squashed / name;
         FILE* file = File::Open(squashedFile, File::Mode::Write);
@@ -33,11 +48,10 @@ bool SquashRegionFiles(fs::path worldDirectory) {
         }
         vector<uint32_t> index(32 * 32 * 2);
         int count = 0;
-        uint64_t totalSize = 0;
         for (int cz = region->minChunkZ(); cz <= region->maxChunkZ(); cz++) {
             for (int cx = region->minChunkX(); cx <= region->maxChunkX(); cx++) {
                 string chunkFileName = Region::GetDefaultCompressedChunkNbtFileName(cx, cz);
-                fs::path chunkFile = squashed / chunkFileName;
+                fs::path chunkFile = *tmp / chunkFileName;
                 if (region->exportToCompressedNbt(cx, cz, chunkFile)) {
                     auto pos = File::Ftell(file);
                     if (!pos) {
@@ -49,7 +63,6 @@ bool SquashRegionFiles(fs::path worldDirectory) {
                     auto size = fs::file_size(chunkFile);
                     index[count] = *pos;
                     index[count + 1] = size;
-                    totalSize += size;
                     FILE *in = File::Open(chunkFile, File::Mode::Read);
                     if (!in) {
                         cerr << "Error: cannot open file: " << chunkFile << endl;
@@ -98,11 +111,15 @@ bool SquashRegionFiles(fs::path worldDirectory) {
         cout << (beforeSize / 1024.f) << " KiB -> ";
         cout << (afterSize / 1024.f) << " KiB (" << (diff < 0 ? "" : "+") << (diff * 100.0f / beforeSize) << "%)" << endl;
         
+        fs::remove(regionFile);
         fs::remove(region->fFilePath);
         
         return true;
     });
-    return true;
+    
+    fs::remove_all(*tmp);
+    
+    return ok;
 }
 
 void PrintUsage() {
