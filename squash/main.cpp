@@ -113,7 +113,9 @@ bool SquashRegionFiles(fs::path worldDirectory) {
         
         fs::remove(regionFile);
         fs::remove(region->fFilePath);
-        fs::rename(squashedFile, squashed / name);
+
+        fs::copy_file(squashedFile, squashed / name);
+        fs::remove(squashedFile);
         
         return true;
     });
