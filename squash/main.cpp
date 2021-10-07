@@ -23,7 +23,7 @@ bool SquashRegionFile(shared_ptr<Region> const& r, fs::path tmp, fs::path squash
         return false;
     }
 
-    string name = "s." + to_string(region->fX) + "." + to_string(region->fZ) + ".smca";
+    string name = "s." + to_string(region->fX) + "." + to_string(region->fZ) + ".mca";
     fs::path squashedFile = tmp / name;
     FILE* file = File::Open(squashedFile, File::Mode::Write);
     if (!file) {
