@@ -233,7 +233,7 @@ int main(int argc, char *argv[]) {
             for (int cx = minCx; cx <= maxCx; cx++) {
                 int rx = Coordinate::RegionFromChunk(cx);
                 int rz = Coordinate::RegionFromChunk(cz);
-                string name = "s." + to_string(rx) + "." + to_string(rz) + ".mca";
+                string name = "s." + to_string(rx) + "." + to_string(rz) + ".smca";
                 auto file = fs::path(input) / "squashed_region" / name;
                 FILE *in = File::Open(file, File::Mode::Read);
                 if (!in) {
@@ -242,7 +242,7 @@ int main(int argc, char *argv[]) {
                 }
                 int cxOffset = cx - rx * 32;
                 int czOffset = cz - rz * 32;
-                int index = (czOffset * 32 + cxOffset) * sizeof(uint32_t) * 2;
+                int index = (czOffset * 32 + cxOffset) * sizeof(uint32_t);
                 uint32_t pos = 0;
                 if (!File::Fseek(in, index, SEEK_SET)) {
                     PrintError("Cannot read chunk index: " + name);
@@ -254,9 +254,15 @@ int main(int argc, char *argv[]) {
                     fclose(in);
                     return 1;
                 }
-                uint32_t size = 0;
-                if (!File::Fread(&size, sizeof(size), 1, in)) {
+                uint32_t nextPos = 0;
+                if (!File::Fread(&nextPos, sizeof(nextPos), 1, in)) {
                     PrintError("Cannot read chunk size from index: " + name);
+                    fclose(in);
+                    return 1;
+                }
+                uint32_t size = nextPos - pos;
+                if (size == 0) {
+                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
                     fclose(in);
                     return 1;
                 }
@@ -267,7 +273,7 @@ int main(int argc, char *argv[]) {
                 }
                 auto const& chunk = Chunk::LoadFromCompressedChunkNbtFile(in, size, cx, cz);
                 if (!chunk) {
-                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] not saved yet");
+                    PrintError("chunk [" + to_string(cx) + ", " + to_string(cz) + "] failed loading");
                     fclose(in);
                     return 1;
                 }

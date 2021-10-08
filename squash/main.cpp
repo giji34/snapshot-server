@@ -8,14 +8,14 @@ namespace fs = std::filesystem;
 
 namespace {
 
-bool SquashRegionFile(shared_ptr<Region> const& r, fs::path tmp, fs::path squashed) {
-    auto beforeSize = fs::file_size(r->fFilePath);
+bool SquashRegionFile(int rx, int rz, fs::path filePath, fs::path tmp, fs::path squashed) {
+    auto beforeSize = fs::file_size(filePath);
     if (beforeSize == 0) {
         return true;
     }
 
-    fs::path regionFile = tmp / r->fFilePath.filename();
-    fs::copy_file(r->fFilePath, regionFile);
+    fs::path regionFile = tmp / filePath.filename();
+    fs::copy_file(filePath, regionFile);
     auto region = Region::MakeRegion(regionFile);
     if (!region) {
         cerr << "Error: failed loading region from " << regionFile << endl;
@@ -23,36 +23,31 @@ bool SquashRegionFile(shared_ptr<Region> const& r, fs::path tmp, fs::path squash
         return false;
     }
 
-    string name = "s." + to_string(region->fX) + "." + to_string(region->fZ) + ".mca";
+    string name = "s." + to_string(region->fX) + "." + to_string(region->fZ) + ".smca";
     fs::path squashedFile = tmp / name;
     FILE* file = File::Open(squashedFile, File::Mode::Write);
     if (!file) {
         cerr << "Error: cannot open file: " << (squashed / name) << endl;
         return false;
     }
-    if (!File::Fseek(file, sizeof(uint32_t) * 32 * 32 * 2, SEEK_SET)) {
+    uint32_t pos = sizeof(uint32_t) * (32 * 32 + 1);
+    if (!File::Fseek(file, pos, SEEK_SET)) {
         cerr << "Error: fseek failed: " << (squashed / name) << endl;
         fclose(file);
         fs::remove(squashedFile);
         return false;
     }
-    vector<uint32_t> index(32 * 32 * 2);
+    vector<uint32_t> index;
+    index.push_back(pos);
     int count = 0;
     for (int cz = region->minChunkZ(); cz <= region->maxChunkZ(); cz++) {
         for (int cx = region->minChunkX(); cx <= region->maxChunkX(); cx++) {
             string chunkFileName = Region::GetDefaultCompressedChunkNbtFileName(cx, cz);
             fs::path chunkFile = tmp / chunkFileName;
             if (region->exportToCompressedNbt(cx, cz, chunkFile)) {
-                auto pos = File::Ftell(file);
-                if (!pos) {
-                    cerr << "Error: ftell failed:" << chunkFile << endl;
-                    fclose(file);
-                    fs::remove(squashedFile);
-                    return false;
-                }
                 auto size = fs::file_size(chunkFile);
-                index[count] = *pos;
-                index[count + 1] = size;
+                pos += size;
+                index.push_back(pos);
                 FILE *in = File::Open(chunkFile, File::Mode::Read);
                 if (!in) {
                     cerr << "Error: cannot open file: " << chunkFile << endl;
@@ -71,8 +66,7 @@ bool SquashRegionFile(shared_ptr<Region> const& r, fs::path tmp, fs::path squash
                 fclose(in);
                 fs::remove(chunkFile);
             } else {
-                index[count] = 0;
-                index[count + 1] = 0;
+                index.push_back(pos);
             }
             count += 2;
         }
@@ -102,7 +96,6 @@ bool SquashRegionFile(shared_ptr<Region> const& r, fs::path tmp, fs::path squash
     cout << (afterSize / 1024.f) << " KiB (" << (diff < 0 ? "" : "+") << (diff * 100.0f / beforeSize) << "%)" << endl;
     
     fs::remove(region->fFilePath);
-    fs::remove(r->fFilePath);
     
     fs::remove(squashed / name);
     fs::copy_file(squashedFile, squashed / name);
@@ -131,8 +124,8 @@ bool SquashRegionFiles(fs::path worldDirectory) {
         return false;
     }
     
-    bool ok = w.eachRegions([squashed, tmp](shared_ptr<Region> const& r) {
-        return SquashRegionFile(r, *tmp, squashed);
+    bool ok = w.eachRegions([squashed, tmp](int rx, int rz, fs::path file) {
+        return SquashRegionFile(rx, rz, file, *tmp, squashed);
     });
     
     fs::remove_all(*tmp);
