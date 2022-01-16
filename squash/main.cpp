@@ -15,6 +15,25 @@ bool SquashRegionFile(int rx, int rz, fs::path filePath, fs::path tmp, fs::path 
     }
 
     fs::path regionFile = tmp / filePath.filename();
+
+    string name = "s." + to_string(rx) + "." + to_string(rz) + ".smca";
+    fs::path squashedFile = tmp / name;
+
+    error_code ec;
+    fs::path targetFile = squashed / name;
+    if (fs::is_regular_file(targetFile, ec)) {
+        auto original = fs::last_write_time(filePath);
+        auto target = fs::last_write_time(targetFile);
+        auto afterSize = fs::file_size(targetFile);
+        if (original <= target) {
+            int64_t diff = (int64_t)afterSize - (int64_t)beforeSize;
+            cout << name << ":\t";
+            cout << (beforeSize / 1024.f) << " KiB -> ";
+            cout << (afterSize / 1024.f) << " KiB (" << (diff < 0 ? "" : "+") << (diff * 100.0f / beforeSize) << "%, newer than original, skip)" << endl;
+            return true;
+        }
+    }
+    
     fs::copy_file(filePath, regionFile);
     auto region = Region::MakeRegion(regionFile);
     if (!region) {
@@ -23,8 +42,6 @@ bool SquashRegionFile(int rx, int rz, fs::path filePath, fs::path tmp, fs::path 
         return false;
     }
 
-    string name = "s." + to_string(region->fX) + "." + to_string(region->fZ) + ".smca";
-    fs::path squashedFile = tmp / name;
     FILE* file = File::Open(squashedFile, File::Mode::Write);
     if (!file) {
         cerr << "Error: cannot open file: " << (squashed / name) << endl;
@@ -39,7 +56,6 @@ bool SquashRegionFile(int rx, int rz, fs::path filePath, fs::path tmp, fs::path 
     }
     vector<uint32_t> index;
     index.push_back(pos);
-    int count = 0;
     for (int cz = region->minChunkZ(); cz <= region->maxChunkZ(); cz++) {
         for (int cx = region->minChunkX(); cx <= region->maxChunkX(); cx++) {
             string chunkFileName = Region::GetDefaultCompressedChunkNbtFileName(cx, cz);
@@ -68,7 +84,6 @@ bool SquashRegionFile(int rx, int rz, fs::path filePath, fs::path tmp, fs::path 
             } else {
                 index.push_back(pos);
             }
-            count += 2;
         }
     }
     
