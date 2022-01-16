@@ -1,6 +1,7 @@
-import * as express from "express";
+import express = require("express");
+import { Request, Response } from "express";
 import { Server } from "http";
-import * as caporal from "caporal";
+import caporal = require("caporal");
 import * as path from "path";
 import * as child_process from "child_process";
 import { sprintf } from "sprintf-js";
@@ -8,19 +9,12 @@ import { mkdirSync, mkdtempSync, rmdir } from "fs";
 import * as fs from "fs";
 
 function getWild(wildDirectory: string, core: string) {
-  return (req, res) => {
+  return (req: Request, res: Response) => {
     try {
-      const {
-        version,
-        dimension,
-        minX,
-        maxX,
-        minY,
-        maxY,
-        minZ,
-        maxZ,
-      } = req.query;
-      const dim = parseInt(dimension, 10);
+      const { minX, maxX, minY, maxY, minZ, maxZ } = req.query;
+      const version = req.query["version"] as string;
+      const dimension = req.query["dimension"] as string;
+      const dim = parseInt(dimension as string, 10);
       let world: string;
       if (dim === -1) {
         world = path.join(wildDirectory, version, "world_nether", "DIM-1");
@@ -33,17 +27,17 @@ function getWild(wildDirectory: string, core: string) {
         "-w",
         world,
         "-x",
-        minX,
+        minX as string,
         "-X",
-        maxX,
+        maxX as string,
         "-y",
-        minY,
+        minY as string,
         "-Y",
-        maxY,
+        maxY as string,
         "-z",
-        minZ,
+        minZ as string,
         "-Z",
-        maxZ,
+        maxZ as string,
       ]);
       p.stdout.pipe(res);
       p.stderr.pipe(process.stderr);
@@ -109,8 +103,8 @@ async function checkoutByHash(
 }
 
 function sendByHash(
-  req,
-  res,
+  req: Request,
+  res: Response,
   params: {
     core: string;
     historyDirectory: string;
@@ -193,9 +187,9 @@ function sendByHash(
 }
 
 function getHistory(historyDirectory: string, core: string) {
-  return (req, res) => {
+  return (req: Request, res: Response) => {
     const { dimension, time, minX, maxX, minY, maxY, minZ, maxZ } = req.query;
-    const date = new Date(time * 1000);
+    const date = new Date(parseInt(time as string, 10) * 1000);
     const d = sprintf(
       "%d%02d%02d%02d%02d%02d",
       date.getFullYear(),
@@ -224,13 +218,13 @@ function getHistory(historyDirectory: string, core: string) {
         core,
         historyDirectory,
         hash: hash.trim(),
-        dimension: parseInt(dimension, 10),
-        minX,
-        maxX,
-        minY,
-        maxY,
-        minZ,
-        maxZ,
+        dimension: parseInt(dimension as string, 10),
+        minX: parseInt(minX as string, 10),
+        maxX: parseInt(maxX as string, 10),
+        minY: parseInt(minY as string, 10),
+        maxY: parseInt(maxY as string, 10),
+        minZ: parseInt(minZ as string, 10),
+        maxZ: parseInt(maxZ as string, 10),
       });
     });
   };
