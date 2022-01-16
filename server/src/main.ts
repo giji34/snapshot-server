@@ -12,7 +12,10 @@ function getWild(wildDirectory: string, core: string) {
   return (req: Request, res: Response) => {
     try {
       const { minX, maxX, minY, maxY, minZ, maxZ } = req.query;
-      const version = req.query["version"] as string;
+      let version = req.query["version"] as string;
+      if (fs.existsSync(path.join(wildDirectory, version + "p1.18"))) {
+        version = version + "p1.18";
+      }
       const dimension = req.query["dimension"] as string;
       const dim = parseInt(dimension as string, 10);
       let world: string;
