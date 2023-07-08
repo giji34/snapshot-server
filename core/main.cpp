@@ -40,23 +40,25 @@ static string NewLine() {
     return kDebug ? "\n" : "";
 }
 
-static string NamespacedId(string const& name) {
-    if (name.find("minecraft:") == 0) {
+static u8string NamespacedId(u8string const& name) {
+    if (name.find(u8"minecraft:") == 0) {
         return name.substr(10);
     } else {
-        return ":" + name;
+        return u8":" + name;
     }
 }
 
-static string BlockName(shared_ptr<Block const> const& block) {
+static u8string BlockName(shared_ptr<Block const> const& block) {
     if (!block) {
-        return "air";
+        return u8"air";
     }
     return NamespacedId(block->toString());
 }
 
-static string Quote(string const& v) {
-    return "\"" + v + "\"";
+static string Quote(u8string const& v) {
+    string s;
+    s.assign((char const*)v.c_str(), v.size());
+    return "\"" + s + "\"";
 }
 
 static string IntToString(int v) {
@@ -189,8 +191,8 @@ int main(int argc, char *argv[]) {
     int const dBy = maxBy - minBy + 1;
     int const dBz = maxBz - minBz + 1;
     int const volume = dBx * dBy * dBz;
-    vector<string> blocks(volume);
-    vector<string> biomes(volume);
+    vector<u8string> blocks(volume);
+    vector<u8string> biomes(volume);
     vector<int> versions(volume);
 
     if (fs::exists(fs::path(input) / "chunk")) {
@@ -219,8 +221,8 @@ int main(int argc, char *argv[]) {
 
                             int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
                             blocks[idx] = BlockName(block);
-                            biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->fDataVersion));
-                            versions[idx] = chunk->fDataVersion;
+                            biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->dataVersion()));
+                            versions[idx] = chunk->dataVersion();
                             count++;
                         }
                     }
@@ -294,8 +296,8 @@ int main(int argc, char *argv[]) {
 
                             int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
                             blocks[idx] = BlockName(block);
-                            biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->fDataVersion));
-                            versions[idx] = chunk->fDataVersion;
+                            biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->dataVersion()));
+                            versions[idx] = chunk->dataVersion();
                             count++;
                         }
                     }
@@ -336,8 +338,8 @@ int main(int argc, char *argv[]) {
 
                                     int const idx = (x - minBx) + (z - minBz) * dBx + (y - minBy) * (dBx * dBz);
                                     blocks[idx] = BlockName(block);
-                                    biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->fDataVersion));
-                                    versions[idx] = chunk->fDataVersion;
+                                    biomes[idx] = NamespacedId(mcfile::biomes::Name(biome, chunk->dataVersion()));
+                                    versions[idx] = chunk->dataVersion();
                                     count++;
                                 }
                             }
@@ -350,10 +352,10 @@ int main(int argc, char *argv[]) {
     cout << "{" << nl;
     cout << Indent(1) << "status:\"ok\"," << nl;
     cout << Indent(1) << "block:{" << nl;
-    PrintPaletteAndIndices<string>(blocks, 2, nl, Quote);
+    PrintPaletteAndIndices<u8string>(blocks, 2, nl, Quote);
     cout << Indent(1) << "}," << nl;
     cout << Indent(1) << "biome:{" << nl;
-    PrintPaletteAndIndices<string>(biomes, 2, nl, Quote);
+    PrintPaletteAndIndices<u8string>(biomes, 2, nl, Quote);
     cout << Indent(1) << "}," << nl;
     cout << Indent(1) << "version:{" << nl;
     PrintPaletteAndIndices<int>(versions, 2, nl, IntToString);

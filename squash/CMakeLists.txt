@@ -7,13 +7,9 @@ if (NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
-add_executable(squash
-  main.cpp
-  ../ext/libminecraft-file/include/minecraft-file.hpp)
+add_executable(squash main.cpp)
 
-target_include_directories(squash PRIVATE ../ext/libminecraft-file/include)
-
-list(APPEND squash_link_libraries "z")
+list(APPEND squash_link_libraries z mcfile)
 
 if (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
   list(APPEND squash_link_libraries pthread)

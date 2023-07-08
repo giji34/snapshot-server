@@ -7,13 +7,9 @@ if (NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_EXTENSIONS OFF)
 endif()
 
-add_executable(core
-  main.cpp
-  ../ext/libminecraft-file/include/minecraft-file.hpp)
+add_executable(core main.cpp)
 
-target_include_directories(core PRIVATE ../ext/libminecraft-file/include)
-
-list(APPEND core_link_libraries "z")
+list(APPEND core_link_libraries z mcfile)
 
 if (NOT "${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
   list(APPEND core_link_libraries pthread)
