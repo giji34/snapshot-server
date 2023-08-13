@@ -1,12 +1,6 @@
 cmake_minimum_required(VERSION 3.0)
 project(snapshot-server-core)
 
-if (NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 20)
-  set(CMAKE_CXX_STANDARD_REQUIRED ON)
-  set(CMAKE_CXX_EXTENSIONS OFF)
-endif()
-
 add_executable(core main.cpp)
 
 list(APPEND core_link_libraries z mcfile)
