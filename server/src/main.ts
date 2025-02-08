@@ -235,29 +235,30 @@ function getHistory(historyDirectory: string, core: string) {
 
 caporal
   .command("run", "start server")
-  .option("--port <port>", "port number", caporal.INT, 8001)
-  .option("--core <core>", "executable file of the core", caporal.STRING)
-  .option("--wild <wild>", "directory for wild snapshot", caporal.STRING)
-  .option("--history <history>", "directory for backup history", caporal.STRING)
+  .option(
+    "--core <core>",
+    "executable file of the core",
+    caporal.STRING | caporal.REQUIRED
+  )
+  .option(
+    "--server <server>",
+    `server config in format: "port:wild:history" where "port": port number, "wild": directory for wild snapshot, "history": directory for backup history`,
+    caporal.LIST | caporal.REPEATABLE | caporal.REQUIRED
+  )
   .action(async (args, opts) => {
-    const port = opts.port;
-    const wild = opts.wild;
     const core = opts.core;
     if (!core) {
       throw new Error("'core' not specified");
     }
-    if (!wild) {
-      throw new Error("'wild' not specified");
+    for (const server of opts.server as string[]) {
+      const [port, wild, history] = server.split(":");
+      const p = parseInt(port, 10);
+      const app = express();
+      app.get("/wild", getWild(wild, core));
+      app.get("/history", getHistory(history, core));
+      const http = new Server(app);
+      http.listen(p);
     }
-    const history = opts.history;
-    if (!history) {
-      throw new Error(`'history' not specified`);
-    }
-    const app = express();
-    app.get("/wild", getWild(wild, core));
-    app.get("/history", getHistory(history, core));
-    const http = new Server(app);
-    http.listen(port);
   });
 
 caporal.parse(process.argv);
